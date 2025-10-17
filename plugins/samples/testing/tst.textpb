@@ -1,0 +1,10 @@
+env {
+  log_level: DEBUG  # aka --loglevel
+  log_path: "/dev/stdout"  # aka --logfile
+  time_secs: 123456789  # set clock
+}
+test {
+  name: "AllowsGoodToken"
+  request_headers { }
+  benchmark: true
+}

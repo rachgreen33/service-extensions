@@ -121,6 +121,41 @@ class LogTestBounds {
   ContextOptions& options_;
 };
 
+long getVmRSS() {
+  std::ifstream status_file("/proc/self/status");
+  if (!status_file.is_open()) {
+    std::cerr << "Error: Could not open /proc/self/status" << std::endl;
+    return -1;
+  }
+
+  std::string line;
+  while (std::getline(status_file, line)) {
+    if (line.rfind("VmRSS:", 0) == 0) {
+      // Line looks like "VmRSS:   12345 kB"
+      size_t start = line.find_first_of("0123456789");
+      size_t end = line.find_last_of("0123456789");
+      if (start != std::string::npos && end != std::string::npos) {
+        std::string rss_kib_str = line.substr(start, (end - start) + 1);
+	      return std::stol(rss_kib_str);
+      }
+    }
+  }
+  return -1; // VmRSS not found.
+}
+
+// Retrieves the current number of bytes allocated by the application
+// from TCMalloc, in KiB.
+long getTCMallocCurrentAllocatedKiB() {
+  std::optional<size_t> bytes =
+      tcmalloc::MallocExtension::GetNumericProperty(
+          "generic.current_allocated_bytes");
+  if (bytes.has_value()) {
+    return *bytes / 1024;
+  }
+  std::cerr << "Error: Could not retrieve tcmalloc generic.current_allocated_bytes" << std::endl;
+  return -1; // Property not available
+}
+
 // Class that manages the state for an additional stream running in a
 // benchmark.
 class AdditionalStream {
@@ -422,6 +457,8 @@ void DynamicTest::TestBody() {
 void DynamicTest::EmitStats(benchmark::State& state,
                             proxy_wasm::PluginHandleBase& handle,
                             const TestContext& context) {
+  state.counters["PeakVmRSS_KiB"] = peak_rss_kib_;
+  state.counters["PeakTCMallocAllocated_KiB"] = peak_tcmalloc_allocated_kib_;
   state.counters["WasmMemoryB"] = benchmark::Counter(
       handle.wasm()->wasm_vm()->getMemorySize(), benchmark::Counter::kDefaults,
       benchmark::Counter::kIs1024);
@@ -438,6 +475,10 @@ void DynamicTest::BenchPluginLifecycle(benchmark::State& state) {
   auto load_wasm = LoadWasm(/*benchmark=*/true);
   BM_RETURN_IF_ERROR(load_wasm.status());
   auto handle = *load_wasm;
+
+  // Initialize peak RSS at the start of the benchmark.
+  peak_rss_kib_ = getVmRSS();
+  peak_tcmalloc_allocated_kib_ = getTCMallocCurrentAllocatedKiB();
 
   // Benchmark plugin initialization and teardown.
   bool first = true;
@@ -458,6 +499,13 @@ void DynamicTest::BenchPluginLifecycle(benchmark::State& state) {
     // Explicit shutdown; required to recreate root context in the next loop.
     handle->wasm()->startShutdown(handle->plugin()->key());
     BM_RETURN_IF_FAILED(handle);
+
+    long current_rss = getVmRSS();
+    if (current_rss > peak_rss_kib_) {
+      peak_rss_kib_ = current_rss;
+    }
+
+    peak_tcmalloc_allocated_kib_ = std::max(peak_tcmalloc_allocated_kib_, getTCMallocCurrentAllocatedKiB());
   }
 }
 
@@ -481,6 +529,10 @@ void DynamicTest::BenchStreamLifecycle(benchmark::State& state) {
     BM_RETURN_IF_ERROR(additional_streams.back().Advance());
   }
 
+  // Initialize peak RSS at the start of the benchmark.
+  peak_rss_kib_ = getVmRSS();
+  peak_tcmalloc_allocated_kib_ = getTCMallocCurrentAllocatedKiB();
+
   // Benchmark stream initialization and teardown.
   bool first = true;
   for (auto _ : state) {
@@ -493,6 +545,13 @@ void DynamicTest::BenchStreamLifecycle(benchmark::State& state) {
       first = false;
       EmitStats(state, *handle, stream);
     }
+
+    long current_rss = getVmRSS();
+    if (current_rss > peak_rss_kib_) {
+      peak_rss_kib_ = current_rss;
+    }
+
+    peak_tcmalloc_allocated_kib_ = std::max(peak_tcmalloc_allocated_kib_, getTCMallocCurrentAllocatedKiB());
   }
 }
 
@@ -544,6 +603,10 @@ void DynamicTest::BenchHttpHandlers(benchmark::State& state) {
           ? env_.additional_stream_advance_rate()
           : 3;
 
+  // Initialize peak RSS at the start of the benchmark.
+  peak_rss_kib_ = getVmRSS();
+  peak_tcmalloc_allocated_kib_ = getTCMallocCurrentAllocatedKiB();
+
   std::optional<TestHttpContext> stream;
   for (auto _ : state) {
     // Pausing timing is not recommended. One way we could avoid it:
@@ -590,6 +653,14 @@ void DynamicTest::BenchHttpHandlers(benchmark::State& state) {
       benchmark::DoNotOptimize(res);
       BM_RETURN_IF_FAILED(handle);
     }
+
+    long current_rss = getVmRSS();
+    if (current_rss > peak_rss_kib_) {
+      peak_rss_kib_ = current_rss;
+    }
+
+    peak_tcmalloc_allocated_kib_ = std::max(peak_tcmalloc_allocated_kib_, getTCMallocCurrentAllocatedKiB());
+
   }
 
   EmitStats(state, *handle, *stream);

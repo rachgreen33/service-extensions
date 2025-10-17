@@ -102,6 +102,9 @@ class DynamicTest : public DynamicFixture {
   pb::Env env_;
   pb::Test cfg_;
   absl::BitGen bitgen_;
+
+  long peak_rss_kib_ = 0;
+  long peak_tcmalloc_allocated_kib_ = 0;
 };
 
 }  // namespace service_extensions_samples

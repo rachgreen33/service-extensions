@@ -44,8 +44,8 @@ provides support for multiple Bazel versions:
 $ bazelisk build <target>
 
 # For example, to build a sample in C++ and Rust, from the plugins/ directory:
-$ bazelisk build //samples/add_header:plugin_cpp.wasm
-$ bazelisk build //samples/add_header:plugin_rust.wasm
+$ bazelisk build //samples/add_response_header:plugin_cpp.wasm
+$ bazelisk build //samples/add_response_header:plugin_rust.wasm
 ```
 
 C++ builds may require a specific toolchain: `--config=clang` or `--config=gcc`.
