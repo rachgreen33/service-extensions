@@ -667,6 +667,26 @@ void DynamicTest::BenchHttpHandlers(benchmark::State& state) {
   EmitStats(state, *handle, *stream);
 }
 
+void DynamicTest::BenchCreateVm(benchmark::State& state) {
+  // Initialize peak RSS.
+  peak_rss_kib_ = getVmRSS();
+  peak_tcmalloc_allocated_kib_ = getTCMallocCurrentAllocatedKiB();
+
+  for (auto _ : state) {
+    ContextOptions opt;
+    auto wasm_or = CreateVm(engine_, std::move(opt));
+    BM_RETURN_IF_ERROR(wasm_or.status());
+
+    // Ensure compiler doesn't optimize away VM creation, since it's not being used.
+    benchmark::DoNotOptimize(wasm_or->get());
+    
+    peak_rss_kib_ = std::max(peak_rss_kib_, getVmRSS());
+    peak_tcmalloc_allocated_kib_ = std::max(peak_tcmalloc_allocated_kib_, getTCMallocCurrentAllocatedKiB());
+  }
+  state.counters["PeakVmRSS_KiB"] = peak_rss_kib_;
+  state.counters["PeakTCMallocAllocated_KiB"] = peak_tcmalloc_allocated_kib_;
+}
+
 void DynamicTest::CheckSideEffects(const std::string& phase,
                                    const pb::Expectation& expect,
                                    const TestContext& context) {

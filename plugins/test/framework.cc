@@ -254,6 +254,12 @@ std::vector<std::string> FindPlugins() {
   return out;
 }
 
+absl::StatusOr<std::shared_ptr<TestWasm>> CreateVm(const std::string& engine, ContextOptions options) {
+  auto vm = proxy_wasm::TestVm::makeVm(engine);
+  auto wasm = std::make_shared<TestWasm>(std::move(vm), std::move(options));
+  return wasm;
+}
+
 absl::StatusOr<std::shared_ptr<proxy_wasm::PluginHandleBase>> CreatePluginVm(
     const std::string& engine, const std::string& wasm_bytes,
     const std::string& plugin_config, proxy_wasm::LogLevel min_log_level,

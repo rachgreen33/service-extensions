@@ -51,12 +51,15 @@ class DynamicTest : public DynamicFixture {
   void TestBody() override;
 
   // Benchmark functions.
+  // Create a Vm.
+  void BenchCreateVm(benchmark::State& state);
   // Plugin lifecycle: onStart, onConfigure, onDone.
   void BenchPluginLifecycle(benchmark::State& state);
   // Stream lifecycle: onCreate, onDone.
   void BenchStreamLifecycle(benchmark::State& state);
   // HTTP handlers: onRequest*, onResponse*
   void BenchHttpHandlers(benchmark::State& state);
+
 
  private:
   // Initialize VM + load wasm.
