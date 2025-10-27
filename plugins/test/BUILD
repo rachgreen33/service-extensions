@@ -34,6 +34,7 @@ cc_library(
         "@com_google_googletest//:gtest",
         "@com_google_protobuf//:protobuf",
         "@com_google_re2//:re2",
+        "@com_google_tcmalloc//tcmalloc:malloc_extension",
     ],
 )
 
@@ -56,7 +57,10 @@ cc_library(
 cc_binary(
     name = "runner",
     testonly = 1,
-    deps = [":runner_lib"],
+    deps = [
+        ":runner_lib",
+        "@com_google_tcmalloc//tcmalloc:tcmalloc",
+    ],
 )
 
 proto_library(

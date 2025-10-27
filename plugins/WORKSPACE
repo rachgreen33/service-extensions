@@ -1,4 +1,4 @@
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
 
 # Release: https://github.com/REPO/releases/tag/YYY
 # Get SHA256: `wget https://github.com/$REPO/archive/$COMMIT.tar.gz && sha256sum $COMMIT.tar.gz`
@@ -18,12 +18,27 @@ http_archive(
     ],
 )
 
+http_file(
+  name = "absl_restore_if_constexpr_patch_1",
+  url = "https://github.com/abseil/abseil-cpp/commit/8e1f92a30d4c345d4ae10fed60a6a36af68b75f3.patch",
+)
+
+http_file(
+  name = "absl_restore_if_constexpr_patch_2",
+  url = "https://github.com/abseil/abseil-cpp/commit/14cfd97abe88d78406478e75f3d33479e57f78bb.patch",
+)
+
 # Abseil for base libs. Updated to work with latest Emscripten and STANDALONE_WASM.
 http_archive(
     name = "com_google_absl",
-    sha256 = "95e90be7c3643e658670e0dd3c1b27092349c34b632c6e795686355f67eca89f",
-    strip_prefix = "abseil-cpp-20240722.0",
-    urls = ["https://github.com/abseil/abseil-cpp/archive/20240722.0.zip"],
+    # sha256 = "95e90be7c3643e658670e0dd3c1b27092349c34b632c6e795686355f67eca89f",
+    strip_prefix = "abseil-cpp-20250814.1",
+    urls = ["https://github.com/abseil/abseil-cpp/archive/20250814.1.zip"],
+    patches = [
+      "@absl_restore_if_constexpr_patch_1//file:downloaded",
+      "@absl_restore_if_constexpr_patch_2//file:downloaded",
+    ],
+    patch_args = ["-p1", "-R"],
 )
 
 # RE2 for C++ regex.
@@ -45,6 +60,26 @@ http_archive(
 load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")
 
 boost_deps()
+
+http_archive(
+    name = "com_google_protobuf",
+    strip_prefix = "protobuf-f5de0a0495faa63b4186fc767324f8b9a7bf4fc4",
+    url = "https://github.com/protocolbuffers/protobuf/archive/f5de0a0495faa63b4186fc767324f8b9a7bf4fc4.zip"
+)
+
+http_archive(
+    name = "rules_cc",
+    sha256 = "b8b918a85f9144c01f6cfe0f45e4f2838c7413961a8ff23bc0c6cdf8bb07a3b6",
+    strip_prefix = "rules_cc-0.1.5",
+    url = "https://github.com/bazelbuild/rules_cc/releases/download/0.1.5/rules_cc-0.1.5.tar.gz",
+)
+
+http_archive(
+    name = "com_google_tcmalloc",
+    # sha256 = "FAKE_HASH_PLEASE_REPLACE", # Faked or commented out
+    strip_prefix = "tcmalloc-45c48e5efeadedd5458279e875fcb7f2b4da3e39",
+    url = "https://github.com/google/tcmalloc/archive/45c48e5efeadedd5458279e875fcb7f2b4da3e39.zip",
+)
 
 # Update boringssl to pick up fix for strdup build issue:
 # https://boringssl-review.googlesource.com/c/boringssl/+/64047
@@ -115,6 +150,35 @@ http_archive(
     name = "com_google_googleurl",  # 2024-10-09
     sha256 = "3db90606ea9ca123d11f85c6fa3627a1e1e403d38c7fd1854a628cf1da3be5e2",
     urls = ["https://storage.googleapis.com/quiche-envoy-integration/googleurl-9cdb1f4d1a365ebdbcbf179dadf7f8aa5ee802e7.tar.gz"],
+)
+
+http_archive(
+    name = "yaml_cpp",
+    urls = [
+        "https://github.com/jbeder/yaml-cpp/archive/refs/tags/0.8.0.tar.gz",
+    ],
+    strip_prefix = "yaml-cpp-0.8.0",
+    sha256 = "fbe74bbdcee21d656715688706da3c8becfd946d92cd44705cc6098bb23b3a16",
+    build_file_content = r"""
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "yaml-cpp",
+    srcs = glob(["src/**/*.cpp"]),
+    hdrs = glob([
+        "include/**/*.h",
+        "src/**/*.h",
+    ]),
+    includes = [
+        "include",
+        "src",
+    ],
+    copts = select({
+        "//conditions:default": ["-fPIC"],
+    }),
+    defines = ["YAML_CPP_STATIC_DEFINE"],
+)
+""",
 )
 
 # --- PLUGIN DEPENDENCIES ---

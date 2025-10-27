@@ -32,6 +32,7 @@
 #include "re2/re2.h"
 #include "test/framework.h"
 #include "test/runner.pb.h"
+#include "tcmalloc/malloc_extension.h"
 
 namespace service_extensions_samples {
 namespace {
