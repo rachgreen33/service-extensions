@@ -142,6 +142,18 @@ absl::Status RunTests(const pb::TestSuite& cfg) {
                 dt.BenchCreateVm(state);
               });
           benchmark::RegisterBenchmark(
+            absl::Substitute("Bench_$0.LoadPlugin", engine),
+            [=](benchmark::State& state) {
+                DynamicTest dt(engine, cfg.env(), test);
+                dt.BenchLoadPlugin(state);
+              });
+          benchmark::RegisterBenchmark(
+            absl::Substitute("Bench_$0.StartPlugin", engine),
+            [=](benchmark::State& state) {
+                DynamicTest dt(engine, cfg.env(), test);
+                dt.BenchStartPlugin(state);
+              });
+          benchmark::RegisterBenchmark(
               absl::Substitute("Bench_$0.PluginLifecycle", engine),
               [=](benchmark::State& state) {
                 DynamicTest dt(engine, cfg.env(), test);
