@@ -742,13 +742,13 @@ void DynamicTest::BenchStartPlugin(benchmark::State& state) {
     }
     state.ResumeTiming();
   
-    // Create root context and call configure on it.
-    // TODO(rachgreen): Review. Is this onStart + onConfigure?
+    // Create root context, call start and configure on it.
     auto plugin_init = InitializePlugin(handle);
     BM_RETURN_IF_ERROR(plugin_init);
 
     // After the work is done, get a pointer to the context we just created.
-    // We'll shut it down in the next iteration.
+    // We'll shut it down in the next iteration. This is so that we have the
+    // pointers at the end of the final loop in order to call EmitStats.
     state.PauseTiming();
     root_context_to_shutdown = static_cast<TestContext*>(
         handle->wasm()->getRootContext(handle->plugin(),
