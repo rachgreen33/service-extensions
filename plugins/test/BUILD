@@ -38,27 +38,39 @@ cc_library(
     ],
 )
 
+# --- THIS IS THE FIX ---
+# Create wrapper libraries for each engine with `alwayslink = 1`.
+# This forces the linker to include the engine's self-registration code,
+# preventing it from being optimized away.
+
 cc_library(
-    name = "runner_lib",
+    name = "_v8_engine",
+    deps = ["@proxy_wasm_cpp_host//:v8_lib"],
+    alwayslink = 1,
+)
+
+cc_library(
+    name = "_wamr_engine",
+    deps = ["@proxy_wasm_cpp_host//:wamr_lib"],
+    alwayslink = 1,
+)
+
+cc_binary(
+    name = "runner",
     testonly = 1,
     srcs = ["runner_main.cc"],
     deps = [
         ":dynamic_test",
         ":framework",
         ":runner_cc_proto",
+        # Add the alwayslink wrapper libraries as dependencies.
+        ":_v8_engine",
+        ":_wamr_engine",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
         "@com_google_benchmark//:benchmark",
         "@com_google_googletest//:gtest",
         "@com_google_protobuf//:protobuf",
-    ],
-)
-
-cc_binary(
-    name = "runner",
-    testonly = 1,
-    deps = [
-        ":runner_lib",
         "@com_google_tcmalloc//tcmalloc:tcmalloc",
     ],
 )

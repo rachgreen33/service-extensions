@@ -534,26 +534,20 @@ void DynamicTest::BenchStreamLifecycle(benchmark::State& state) {
   peak_rss_kib_ = getVmRSS();
   peak_tcmalloc_allocated_kib_ = getTCMallocCurrentAllocatedKiB();
 
+  // Declare the stream object outside the loop to extend its lifetime.
+  std::optional<TestHttpContext> stream;
+
   // Benchmark stream initialization and teardown.
-  bool first = true;
   for (auto _ : state) {
-    auto stream = TestHttpContext(handle);
-    benchmark::DoNotOptimize(stream);
+    // Implicitly tear down previous object.
+    stream.emplace(handle);
+    benchmark::DoNotOptimize(*stream);
     BM_RETURN_IF_FAILED(handle);
-    stream.TearDown();
 
-    if (first) {
-      first = false;
-      EmitStats(state, *handle, stream);
-    }
-
-    long current_rss = getVmRSS();
-    if (current_rss > peak_rss_kib_) {
-      peak_rss_kib_ = current_rss;
-    }
-
+    peak_rss_kib_ = std::max(peak_rss_kib_, getVmRSS());
     peak_tcmalloc_allocated_kib_ = std::max(peak_tcmalloc_allocated_kib_, getTCMallocCurrentAllocatedKiB());
   }
+  EmitStats(state, *handle, *stream);
 }
 
 void DynamicTest::BenchHttpHandlers(benchmark::State& state) {
