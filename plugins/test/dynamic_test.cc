@@ -695,7 +695,7 @@ void DynamicTest::BenchLoadPlugin(benchmark::State& state) {
     auto wasm = *wasm_or;
     state.ResumeTiming();
 
-    bool loaded = wasm->load(*wasm_bytes, /*allow_precompiled=*/false);
+    bool loaded = wasm->load(*wasm_bytes, /*allow_precompiled=*/true);
     if (!loaded) {
       state.SkipWithError("Failed to load Wasm code.");
       return;

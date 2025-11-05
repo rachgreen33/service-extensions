@@ -271,7 +271,7 @@ absl::StatusOr<std::shared_ptr<proxy_wasm::PluginHandleBase>> CreatePluginVm(
 
   // Load the plugin.
   auto wasm = std::make_shared<TestWasm>(std::move(vm), std::move(options));
-  if (!wasm->load(wasm_bytes, /*allow_precompiled=*/false)) {
+  if (!wasm->load(wasm_bytes, /*allow_precompiled=*/true)) {
     absl::string_view err = "Failed to load Wasm code";
     wasm->fail(proxy_wasm::FailState::UnableToInitializeCode, err);
     return absl::FailedPreconditionError(err);
